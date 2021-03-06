@@ -1,5 +1,4 @@
-import wfdb
-
+import data_extraction
 
 if __name__ == '__main__':
-    a = 0
+    data_extraction.edf2npy_save()
