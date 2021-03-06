@@ -1,0 +1,30 @@
+from mne.io import read_raw_edf
+import numpy as np
+import os
+
+abd_FOLDER = 'abd2012'
+arr_FOLDER = 'arr_nr2019'
+
+
+def edf2npy_save(folder_name: str = abd_FOLDER,
+                 save_qrs: bool = True):
+    """Saves .edf files as numpy arrays:
+    _data.npy - raw data
+    _QRS.npy - QRS time moments (annotations.onset)
+    _ch.npy - channel names"""
+
+    new_folder = folder_name + '_npy'
+    os.mkdir(new_folder)
+    if not folder_name.endswith('/'):
+        folder_name += '/'
+    for name in os.listdir(folder_name):
+        if name.endswith('.edf'):
+            data = read_raw_edf(folder_name + name)
+            raw_data = data.get_data()
+            channels = data.ch_names
+            new_name = os.path.splitext(name)[0]
+            np.save(new_folder + '/' + new_name + '_data.npy', raw_data)
+            np.save(new_folder + '/' + new_name + '_ch.npy', np.array(channels))
+            if save_qrs:
+                np.save(new_folder + '/' + new_name + '_QRS.npy', data.annotations.onset)
+    return None
