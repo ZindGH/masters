@@ -2,11 +2,11 @@ from mne.io import read_raw_edf
 import numpy as np
 import os
 
-abd_FOLDER = 'abd2012'
-arr_FOLDER = 'arr_nr2019'
+FOLDERS = {'abd': 'abd2012',
+           'arr': 'arr_nr2019'}
 
 
-def edf2npy_save(folder_name: str = abd_FOLDER,
+def edf2npy_save(folder_name: str = FOLDERS['abd'],
                  save_qrs: bool = True):
     """Saves .edf files as numpy arrays:
     _data.npy - raw data
