@@ -2,11 +2,12 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from data_extraction import FOLDERS
-from scipy.signal import butter, iirnotch, lfilter
+from scipy.signal import butter, iirnotch, sosfilt, lfilter
 from scipy.signal.windows import hann
 from scipy.fft import fft, fftfreq
 
 folder = FOLDERS['abd'] + '_npy/'
+# You should change module fs parameter if signal has another sample frequency
 fs = 1000
 
 
@@ -77,14 +78,25 @@ def plot_fft(data, freq_range: tuple = (0, 1)):
 
     shape = data.shape
     window = hann(shape[1])
-    yf = fft(data*window)
+    yf = fft(data * window)
     # print(yf.shape)
-    plot_record(2 / shape[1] * np.abs(yf[0:shape[1]//2]), time_range=freq_range, fft_plot=True)
+    plot_record(2 / shape[1] * np.abs(yf[0:shape[1] // 2]), time_range=freq_range, fft_plot=True)
+
+
+def lowpass_filter(data, order, low_freq):
+    sos = butter(order, low_freq, btype='lowpass', fs=fs, output='sos')
+    filtered_data = sosfilt(sos, data)
+    return filtered_data
+
+
+def highpass_filter(data, order, high_freq):
+    sos = butter(order, high_freq, btype='highpass', fs=fs, output='sos')
+    filtered_data = sosfilt(sos, data)
+    return filtered_data
 
 
 def bandpass_filter(data, high, low, order: int = 3):
-    # c_freq_high = 2 * high / fs
-    # c_freq_low = 2 * low / fs
-    b, a = butter(order, [low, high], btype='band', fs=fs)
-    filtered_data = lfilter(b, a, data)
+
+    sos = butter(order, [low, high], btype='band', fs=fs, output='sos')
+    filtered_data = sosfilt(sos, data)
     return filtered_data
