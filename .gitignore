@@ -1,3 +1,7 @@
 # Pycharm
 .idea
 /venv
+/_pycashe_
+# Datasets
+/abd2012
+/arr_nr2019

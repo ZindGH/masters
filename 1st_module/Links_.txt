@@ -1,0 +1,7 @@
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3100207/
+https://iopscience.iop.org/article/10.1088/0967-3334/35/8/1521/pdf [2014, overall]
+https://sci-hub.do/https://doi.org/10.1155/2018/7061456 [2018, FastICA improved]
+https://sci-hub.do/10.1088/1361-6579/ab4b13 [2019, Morphological analysis]
+https://sci-hub.do/10.1088/0967-3334/37/5/627 [2016, Open-sourse framework (morph-feat)]
+https://sci-hub.do/10.1088/0967-3334/37/9/1392 [2016, QT interval]
+https://sci-hub.do/https://doi.org/10.1111/j.1471-0528.2004.00178.x [2004, QT interval small_description]
