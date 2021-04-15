@@ -96,8 +96,12 @@ def highpass_filter(data, order, high_freq):
 
 
 def bandpass_filter(data, high, low, order: int = 3):
-
     sos = butter(order, [low, high], btype='band', fs=FS, output='sos')
     filtered_data = sosfilt(sos, data)
     return filtered_data
 
+
+def matched_filter(data, b):
+    """b - fir coefficients (template)"""
+    filtered_data = lfilter(b, 1, data)
+    return filtered_data
