@@ -1,6 +1,7 @@
 import numpy as np
 from processing import FS
 import plotly.graph_objects as go
+from ecgdetectors import Detectors
 
 
 def filter_templates(fs: int, qrs_template: int = 1):
@@ -26,16 +27,23 @@ def filter_templates(fs: int, qrs_template: int = 1):
                     - 0.2 * np.exp(-np.power(qrs[:, 1] - 0.007, 2) / np.power(0.005, 2))
     ###
 
-    qrs[:, 0] = (qrs[:, 0] - qrs[:, 0].mean()) / (qrs[:, 0].std()) # Normalization
+    qrs[:, 0] = (qrs[:, 0] - qrs[:, 0].mean()) / (qrs[:, 0].std())  # Normalization
     qrs[:, 1] = qrs[::-1, 1]  # Reversing => fir_coeffs(b)
     #########
     pqrst = None
     return qrs, pqrst
 
 
+def find_qrs(data, qrs=None):
+    # GROUP DELAY FIX REQUIRED #
+    detector = Detectors(FS)
+    qrs_peaks = detector.pan_tompkins_detector(data[0, :])
+    return None
+
+
 if __name__ == '__main__':
     templ, _ = filter_templates(FS, 3)
-
+    qrs_peaks = find_qrs()
     # Plot template
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=templ[:, 1], y=templ[:, 0]))

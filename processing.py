@@ -2,7 +2,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from data_extraction import FOLDERS
-from scipy.signal import butter, iirnotch, sosfilt, lfilter
+from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt
 from scipy.signal.windows import hann
 from scipy.fft import fft, fftfreq
 
@@ -103,5 +103,6 @@ def bandpass_filter(data, high, low, order: int = 3):
 
 def matched_filter(data, b):
     """b - fir coefficients (template)"""
-    filtered_data = lfilter(b, 1, data)
+    # filtered_data = lfilter(b, 1, data)
+    filtered_data = filtfilt(b, 1, data)
     return filtered_data
