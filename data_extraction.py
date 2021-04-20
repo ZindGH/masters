@@ -3,7 +3,14 @@ import numpy as np
 import os
 
 FOLDERS = {'abd': 'abd2012',
-           'arr': 'arr_nr2019'}
+           'arr': 'arr_nr2019',
+           'DaISy': 'DaiSy'}
+
+
+def space_separ2np(path: str = 'DaISy/FOETAL_ECG.dat'):
+    data = np.loadtxt(path)
+    np.save(FOLDERS['DaISy'] + '/daisy.npy', data[:, 1:])
+    return None
 
 
 def edf2npy_save(folder_name: str = FOLDERS['abd'],
@@ -28,3 +35,7 @@ def edf2npy_save(folder_name: str = FOLDERS['abd'],
             if save_qrs:
                 np.save(new_folder + '/' + new_name + '_QRS.npy', data.annotations.onset)
     return None
+
+
+if __name__ == '__main__':
+    space_separ2np()

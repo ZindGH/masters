@@ -6,13 +6,15 @@ from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt
 from scipy.signal.windows import hann
 from scipy.fft import fft, fftfreq
 
-folder = FOLDERS['abd'] + '_npy/'
 # You should change module FS parameter if signal has another sample frequency
+# abd = 1000 Hz
+# DaISy = 250 Hz
 FS = 1000
 
 
-def open_record(record_name: str = 'r01', qrs: bool = True):
+def open_record_abd(record_name: str = 'r01', qrs: bool = True):
     """ Loads data, channel info and qrs timestamps """
+    folder = FOLDERS['abd'] + '_npy/'
     data = np.load(folder + record_name + '_data.npy')
     channels = np.load(folder + record_name + '_ch.npy')
     if qrs:
@@ -21,20 +23,26 @@ def open_record(record_name: str = 'r01', qrs: bool = True):
     return data, channels
 
 
+def open_record_DaISy(record_name: str = '/daisy.npy'):
+    folder = FOLDERS['DaISy']
+    data = np.load(folder + record_name).T
+    return data
+
+
 def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = False):
     """Plots all channels in different axes. With QRS points if included"""
 
     # Cut data for plotting
     if not fft_plot:
-        data = data[:, int(np.float(data.shape[1] * time_range[0])):int(np.float(data.shape[1] * time_range[1]))]
+        data = data[:, int(data.shape[1] * time_range[0]):int(data.shape[1] * time_range[1])]
     if qrs is not None:
-        qrs = qrs[int(np.float(qrs.shape[0] * time_range[0])):int(np.float(qrs.shape[0] * time_range[1]))]
+        qrs = qrs[int(qrs.shape[0] * time_range[0]):int(qrs.shape[0] * time_range[1])]
     data_shape = data.shape
     n_row = int(data_shape[0] // 2)
-    n_col = int(np.ceil(data_shape[0] / 2))
+    n_col = int(np.floor(data_shape[0] / n_row))
     if fft_plot:
-        time = fftfreq(data_shape[1], 1 / FS)[int(np.float(data_shape[1] // 2 * time_range[0])):
-                                              int(np.float(data_shape[1] // 2 * time_range[1]))]
+        time = fftfreq(data_shape[1], 1 / FS)[int(data_shape[1] // 2 * time_range[0]):
+                                              int(data_shape[1] // 2 * time_range[1])]
     else:
         time = np.arange(0, (data_shape[1] * 1 / FS) - 1 / FS, 1 / FS)
     fig = make_subplots(rows=n_row, cols=n_col)
@@ -106,3 +114,9 @@ def matched_filter(data, b):
     # filtered_data = lfilter(b, 1, data)
     filtered_data = filtfilt(b, 1, data)
     return filtered_data
+
+
+if __name__ == '__main__':
+    data = open_record_DaISy()
+    print(data.shape)
+
