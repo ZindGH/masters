@@ -68,6 +68,41 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
     fig.show()
 
 
+def scatter_beautiful(data, fs, time_range: tuple = (0, 1), spectrum: bool = False, **kwargs):
+    """Plots go.Scatter with title, axis and so on.
+
+    kwargs: 'title'; 'xlabel'; 'ylabel'."""
+    data = data[int(len(data) * time_range[0]):int(len(data) * time_range[1])]
+    N = len(data)
+    if spectrum:
+        time = fftfreq(N, 1 / FS)[int(N // 2 * time_range[0]):
+                                  int(N // 2 * time_range[1])]
+        window = hann(N)
+        data = fft(data * window)
+    else:
+        time = np.arange(0, (N * 1 / fs) - 1 / fs, 1 / fs)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(y=data, x=time))
+    fig.update_layout(
+        title={
+            'text': kwargs['title'],
+            'y': 0.92,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+        font=dict(
+            family="Times New Roman",
+            size=22,
+            color="Black"
+        )
+
+    )
+    fig.update_xaxes(title=dict(text=kwargs['xlabel'], font=dict(size=25, color="Black")))
+    fig.update_yaxes(title=dict(text=kwargs['ylabel'], font=dict(size=25, color="Black")))
+    fig.show()
+    return None
+
+
 def notch_filter(data, cutoff):
     """Filters signal with given parameters"""
     c_freq = 2 * cutoff / FS
@@ -119,4 +154,3 @@ def matched_filter(data, b):
 if __name__ == '__main__':
     data = open_record_DaISy()
     print(data.shape)
-
