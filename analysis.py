@@ -1,8 +1,9 @@
 import numpy as np
 from processing import FS
 import plotly.graph_objects as go
-from ecgdetectors import Detectors
 from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt
+from processing import MWA
+from sklearn.decomposition import FastICA
 
 
 def filter_templates(fs: int, qrs_template: int = 1):
@@ -54,24 +55,6 @@ def find_qrs(ecg, fs: int = 1000):
     mwa_peaks = panPeakDetect(mwa, fs)
 
     return mwa_peaks
-
-
-def MWA(input_array, window_size):
-    """Moving mean from ecgdetectors.py
-    window_size: fs*0.12(recommended)"""
-    mwa = np.zeros(len(input_array))
-    for i in range(len(input_array)):
-        if i < window_size:
-            section = input_array[0:i]
-        else:
-            section = input_array[i - window_size:i]
-
-        if i != 0:
-            mwa[i] = np.mean(section)
-        else:
-            mwa[i] = input_array[i]
-
-    return mwa
 
 
 def panPeakDetect(detection, fs):
@@ -137,6 +120,15 @@ def panPeakDetect(detection, fs):
     signal_peaks.pop(0)
 
     return signal_peaks
+
+
+def fast_ica(x, n: int = 3, func='cube'):
+    """ Implement FastICA with 'n' sources
+    ____________
+    func: 'cube', 'logcosh', 'exp' OR function with (G(y), g(x)), where g=G'
+    """
+    fastica = FastICA(n, algorithm='deflation', fun=func)
+    return fastica.fit_transform(x.T).T
 
 
 if __name__ == '__main__':

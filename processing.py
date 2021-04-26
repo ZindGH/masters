@@ -68,19 +68,24 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
     fig.show()
 
 
-def scatter_beautiful(data, fs, time_range: tuple = (0, 1), spectrum: bool = False, **kwargs):
+def scatter_beautiful(data, fs, time_range: tuple = (0, 1), spectrum: bool = False, mwa_window=None, **kwargs):
     """Plots go.Scatter with title, axis and so on.
 
-    kwargs: 'title'; 'xlabel'; 'ylabel'."""
-    data = data[int(len(data) * time_range[0]):int(len(data) * time_range[1])]
+    kwargs: 'title'; 'xlabel'; 'ylabel'.
+    mwa_window = None, for window = 1 sample; 0:i:1 for fraction of sample frequency.
+    """
     N = len(data)
     if spectrum:
-        time = fftfreq(N, 1 / FS)[int(N // 2 * time_range[0]):
+        time = fftfreq(N, 1 / fs)[int(N // 2 * time_range[0]):
                                   int(N // 2 * time_range[1])]
         window = hann(N)
         data = fft(data * window)
+        data = 2 / N * np.abs(data[0:N // 2])
+        if mwa_window:
+            data = MWA(data, int(mwa_window * 0.12))
     else:
         time = np.arange(0, (N * 1 / fs) - 1 / fs, 1 / fs)
+        data = data[int(len(data) * time_range[0]):int(len(data) * time_range[1])]
     fig = go.Figure()
     fig.add_trace(go.Scatter(y=data, x=time))
     fig.update_layout(
@@ -149,6 +154,40 @@ def matched_filter(data, b):
     # filtered_data = lfilter(b, 1, data)
     filtered_data = filtfilt(b, 1, data)
     return filtered_data
+
+
+def MWA(input_array, window_size):
+    """Moving mean from ecgdetectors.py
+    window_size: fs*0.12(recommended)"""
+    mwa = np.zeros(len(input_array))
+    for i in range(len(input_array)):
+        if i < window_size:
+            section = input_array[0:i]
+        else:
+            section = input_array[i - window_size:i]
+
+        if i != 0:
+            mwa[i] = np.mean(section)
+        else:
+            mwa[i] = input_array[i]
+
+    return mwa
+
+
+def prepare_ICA(data):
+    data = data.T - np.mean(data.T)
+    sigma = np.cov(data, rowvar=True)  # [M x M]
+    # Singular Value Decomposition. X = U * np.diag(S) * V
+    U, S, V = np.linalg.svd(sigma)
+    epsilon = 1e-5
+    # ZCA Whitening matrix: U * Lambda * U'
+    ZCA = np.dot(U, np.dot(np.diag(1.0 / np.sqrt(S + epsilon)), U.T))  # [M x M]
+    data_whitened = np.dot(ZCA, data)
+    return data_whitened.T
+
+
+def tanh(y):
+    return np.log(np.cosh(y)) - 0.375, np.tanh(y)
 
 
 if __name__ == '__main__':
