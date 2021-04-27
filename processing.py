@@ -2,9 +2,9 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from data_extraction import FOLDERS
-from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt
-from scipy.signal.windows import hann
+from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt, sosfiltfilt
 from scipy.fft import fft, fftfreq
+import pywt
 
 # You should change module FS parameter if signal has another sample frequency
 # abd = 1000 Hz
@@ -43,6 +43,7 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
     if fft_plot:
         time = fftfreq(data_shape[1], 1 / FS)[int(data_shape[1] // 2 * time_range[0]):
                                               int(data_shape[1] // 2 * time_range[1])]
+
     else:
         time = np.arange(0, (data_shape[1] * 1 / FS) - 1 / FS, 1 / FS)
     fig = make_subplots(rows=n_row, cols=n_col)
@@ -116,36 +117,42 @@ def notch_filter(data, cutoff):
     return filtered_data
 
 
-def plot_fft(data, freq_range: tuple = (0, 1)):
+def plot_fft(data, freq_range: tuple = (0, 1), mwa_window=None):
     """Plot fft of numpy signal.
 
     Parameters
     ----------
     data :  numpy array with dimensions (n,m) where m is number of points
-    freq_range : sets frequency range, (min, max) where max is m // 2. """
+    freq_range : sets frequency range, (min, max) where max is m // 2
+    mwa_window : window in points."""
 
     shape = data.shape
     window = hann(shape[1])
     yf = fft(data * window)
     # print(yf.shape)
-    plot_record(2 / shape[1] * np.abs(yf[0:shape[1] // 2]), time_range=freq_range, fft_plot=True)
+    yf = 2 / shape[1] * np.abs(yf[0:shape[1] // 2])
+    if mwa_window:
+        for row in range(yf.shape[0]):
+            yf[row, :] = MWA(yf[row, :], int(mwa_window))
+
+    plot_record(yf, time_range=freq_range, fft_plot=True)
 
 
 def lowpass_filter(data, order, low_freq):
     sos = butter(order, low_freq, btype='lowpass', fs=FS, output='sos')
-    filtered_data = sosfilt(sos, data)
+    filtered_data = sosfiltfilt(sos, data)
     return filtered_data
 
 
 def highpass_filter(data, order, high_freq):
     sos = butter(order, high_freq, btype='highpass', fs=FS, output='sos')
-    filtered_data = sosfilt(sos, data)
+    filtered_data = sosfiltfilt(sos, data)
     return filtered_data
 
 
 def bandpass_filter(data, high, low, order: int = 3):
     sos = butter(order, [low, high], btype='band', fs=FS, output='sos')
-    filtered_data = sosfilt(sos, data)
+    filtered_data = sosfiltfilt(sos, data)
     return filtered_data
 
 
@@ -188,6 +195,50 @@ def prepare_ICA(data):
 
 def tanh(y):
     return np.log(np.cosh(y)) - 0.375, np.tanh(y)
+
+
+def bwr(signal):
+    """
+    Calculate the baseline of signal.
+
+    Args:
+        signal (numpy 1d array): signal whose baseline should be calculated
+
+
+    Returns:
+        baseline (numpy 1d array with same size as signal): baseline of the signal
+    """
+    ssds = np.zeros((3))
+
+    cur_lp = np.copy(signal)
+    iterations = 0
+    while True:
+        # Decompose 1 level
+        lp, hp = pywt.dwt(cur_lp, "db4")
+
+        # Shift and calculate the energy of detail/high pass coefficient
+        ssds = np.concatenate(([np.sum(hp ** 2)], ssds[:-1]))
+
+        # Check if we are in the local minimum of energy function of high-pass signal
+        if ssds[2] > ssds[1] and ssds[1] < ssds[0]:
+            break
+
+        cur_lp = lp[:]
+        iterations += 1
+
+    # Reconstruct the baseline from this level low pass signal up to the original length
+    baseline = cur_lp[:]
+    for _ in range(iterations):
+        baseline = pywt.idwt(baseline, np.zeros((len(baseline))), "db4")
+
+    return baseline[: len(signal)], signal - baseline[: len(signal)]
+
+
+def bwr_signals(signal):
+    """ Returns BWR of all signals with format [n_channel, samples]"""
+    for row in range(signal.shape[0]):
+        _, signal[row, :] = bwr(signal[row, :])
+    return signal
 
 
 if __name__ == '__main__':
