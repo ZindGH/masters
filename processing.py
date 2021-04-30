@@ -39,7 +39,7 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
         qrs = qrs[int(qrs.shape[0] * time_range[0]):int(qrs.shape[0] * time_range[1])]
     data_shape = data.shape
     n_row = int(data_shape[0] // 2)
-    n_col = int(np.floor(data_shape[0] / n_row))
+    n_col = int(np.ceil(data_shape[0] / n_row))
     if fft_plot:
         time = fftfreq(data_shape[1], 1 / FS)[int(data_shape[1] // 2 * time_range[0]):
                                               int(data_shape[1] // 2 * time_range[1])]
@@ -181,7 +181,7 @@ def MWA(input_array, window_size):
     return mwa
 
 
-def prepare_ICA(data):
+def whiten(data):
     data = data.T - np.mean(data.T)
     sigma = np.cov(data, rowvar=True)  # [M x M]
     # Singular Value Decomposition. X = U * np.diag(S) * V
