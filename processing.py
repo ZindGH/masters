@@ -3,13 +3,14 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from data_extraction import FOLDERS
 from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt, sosfiltfilt
+from scipy.signal.windows import hann
 from scipy.fft import fft, fftfreq
 import pywt
 
 # You should change module FS parameter if signal has another sample frequency
 # abd = 1000 Hz
 # DaISy = 250 Hz
-FS = 1000
+FS = 250
 
 
 def open_record_abd(record_name: str = 'r01', qrs: bool = True):
@@ -69,7 +70,8 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
     fig.show()
 
 
-def scatter_beautiful(data, fs, time_range: tuple = (0, 1), spectrum: bool = False, mwa_window=None, **kwargs):
+def scatter_beautiful(data, fs: int = FS, time_range: tuple = (0, 1), spectrum: bool = False, mwa_window=None,
+                      **kwargs):
     """Plots go.Scatter with title, axis and so on.
 
     kwargs: 'title'; 'xlabel'; 'ylabel'.
@@ -85,7 +87,7 @@ def scatter_beautiful(data, fs, time_range: tuple = (0, 1), spectrum: bool = Fal
         if mwa_window:
             data = MWA(data, int(mwa_window * 0.12))
     else:
-        time = np.arange(0, (N * 1 / fs) - 1 / fs, 1 / fs)
+        time = np.arange(0, (N * 1 / fs), 1 / fs)
         data = data[int(len(data) * time_range[0]):int(len(data) * time_range[1])]
     fig = go.Figure()
     fig.add_trace(go.Scatter(y=data, x=time))
@@ -103,8 +105,10 @@ def scatter_beautiful(data, fs, time_range: tuple = (0, 1), spectrum: bool = Fal
         )
 
     )
-    fig.update_xaxes(title=dict(text=kwargs['xlabel'], font=dict(size=25, color="Black")))
-    fig.update_yaxes(title=dict(text=kwargs['ylabel'], font=dict(size=25, color="Black")))
+    if 'xlabel' in kwargs:
+        fig.update_xaxes(title=dict(text=kwargs['xlabel'], font=dict(size=25, color="Black")))
+    if 'ylabel' in kwargs:
+        fig.update_yaxes(title=dict(text=kwargs['ylabel'], font=dict(size=25, color="Black")))
     fig.show()
     return None
 
@@ -239,6 +243,14 @@ def bwr_signals(signal):
     for row in range(signal.shape[0]):
         _, signal[row, :] = bwr(signal[row, :])
     return signal
+
+
+def mwa_np(data, window: int = 40, lag: bool = True, **kwargs):
+    if 'mode' in kwargs:
+        mwa = np.convolve(data, np.ones(window), mode=kwargs['mode']) / window
+    else:
+        mwa = np.convolve(data, np.ones(window)) / window
+    return mwa
 
 
 if __name__ == '__main__':
