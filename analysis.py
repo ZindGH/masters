@@ -48,7 +48,7 @@ def find_qrs(ecg, fs: int = processing.FS, peak_search: str = 'custom'):
     # processing.scatter_beautiful(squared, title="square OUTPUT")
     # mwa = processing.MWA(squared, N)
     mwa = processing.mwa_np(squared, window=N, mode='same')
-    processing.scatter_beautiful(mwa, title="mwa OUTPUT before final zerowing")
+    # processing.scatter_beautiful(mwa, title="mwa OUTPUT before final zerowing")
     # mwa[:int(0.08 * fs)] = 0
     if peak_search == "original":
         mwa_peaks = panPeakDetect(mwa, fs)
@@ -119,6 +119,7 @@ def panPeakDetect(detection, fs):
                     RR_missed = int(1.66 * RR_ave)
 
                 index = index + 1
+    # First possible peak detection
     first_possible_peak = np.argmax(detection[0:int(0.25 * fs)])
     if detection[first_possible_peak] > SPKI:
         signal_peaks[0] = first_possible_peak
@@ -190,12 +191,15 @@ def ts_method(signal, template_duration: float = 0.12, fs: int = processing.FS, 
     if not t_dur % 2 == 0:
         t_dur += 1
     dims = signal.shape
-    if np.max(np.abs(signal[0, :])) < np.max(np.abs(signal[1, :])):
-        r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
-    else:
-        r_peaks = find_qrs(signal[0, :], peak_search=peak_search)
-    processing.scatter_beautiful(r_peaks * 1000/fs, title='peaks')
-    print(len(r_peaks))
+    # if np.max(np.abs(signal[0, :])) < np.max(np.abs(signal[1, :])):
+    #     r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
+    #     r_peaks = peak_enhance(signal[1, :], peaks=r_peaks, window=0.15)
+    # else:
+    r_peaks = find_qrs(signal[0, :], peak_search=peak_search)
+    r_peaks = peak_enhance(signal[0, :], peaks=r_peaks, window=0.2)
+    processing.scatter_beautiful(r_peaks * 1000 / fs, title='peaks')
+
+    # print(len(r_peaks))
     # Please, rework it...
     for n in range(dims[0]):
         template = np.full((len(r_peaks), t_dur), np.nan)
@@ -213,12 +217,33 @@ def ts_method(signal, template_duration: float = 0.12, fs: int = processing.FS, 
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel start ' + str(n))
             elif r_ind + t_dur // 2 + 1 > dims[1]:
                 signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2 + 1] -= template_mean[
-                                                                            0:dims[1] - r_ind + t_dur // 2]
+                                                                        0:dims[1] - r_ind + t_dur // 2]
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel end ' + str(n))
             else:
                 signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2] -= template_mean
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel ' + str(n))
     return signal
+
+
+def peak_enhance(signal, peaks, window: int = 0.08, fs: int = processing.FS):
+    """Enhanced peaks with maximum amplitude centering
+    :signal: ECG signal
+    :peaks: detected peaks
+    :window: centering window"""
+    window = int(fs * window)
+    if not window % 2 == 0:
+        window += 1
+    enhanced_peaks = np.zeros(len(peaks), dtype=int)
+    for i, peak in enumerate(peaks):
+        if peak < window // 2:
+            enhanced_peaks[i] = np.argmax(signal[0:peak + window // 2 + 1])
+        elif peak + window // 2 + 1 > signal.shape[0]:
+            enhanced_peaks[i] = np.argmax(signal[peak - window // 2:]) + peak - window // 2
+        else:
+            # Because of one-side lag -> window: p - w * 0.25% : p + w * 75%
+            enhanced_peaks[i] = np.argmax(signal[peak - window // 4:peak + 3 * window // 4]) + peak - window // 4
+
+    return enhanced_peaks
 
 
 if __name__ == '__main__':

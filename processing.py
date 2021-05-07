@@ -10,7 +10,7 @@ import pywt
 # You should change module FS parameter if signal has another sample frequency
 # abd = 1000 Hz
 # DaISy = 250 Hz
-FS = 250
+FS = 1000
 
 
 def open_record_abd(record_name: str = 'r01', qrs: bool = True):
