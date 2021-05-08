@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt
 from sklearn.decomposition import FastICA
 import processing
+from scipy import interpolate
 
 
 def filter_templates(fs: int, qrs_template: int = 1):
@@ -192,8 +193,8 @@ def ts_method(signal, template_duration: float = 0.12, fs: int = processing.FS, 
         t_dur += 1
     dims = signal.shape
     # if np.max(np.abs(signal[0, :])) < np.max(np.abs(signal[1, :])):
-    #     r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
-    #     r_peaks = peak_enhance(signal[1, :], peaks=r_peaks, window=0.15)
+      # r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
+      # r_peaks = peak_enhance(signal[1, :], peaks=r_peaks, window=0.2)
     # else:
     r_peaks = find_qrs(signal[0, :], peak_search=peak_search)
     r_peaks = peak_enhance(signal[0, :], peaks=r_peaks, window=0.2)
@@ -245,6 +246,45 @@ def peak_enhance(signal, peaks, window: int = 0.08, fs: int = processing.FS):
 
     return enhanced_peaks
 
+
+def cubic_interpolation(signal, multiplier: int = 2, fs: int = processing.FS, time: bool = True):
+    """
+
+
+    :param signal: 1D R-peaks data
+    :param multiplier: final data len is len(signal) * multiplier
+    :param time: if output consists of time values
+    :param fs: Sampling frequency
+    :return: Interpolated signal
+
+    """
+
+    N = len(signal)
+    x = np.arange(N * multiplier)
+    interpolated = interpolate.CubicSpline(range(N), signal)
+    if time:
+        statement=1
+    else:
+        return interpolated(x)
+
+def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS):
+    """
+    Calculate RR intervals from peaks
+
+    :param peaks: peak indexes
+    :param mode: output mode: "sec" (in seconds), "bpm" (beats per minute)
+    :param fs: sampling frequency
+    :return: Heart rate
+    """
+    size = len(peaks) - 1
+    rr_intervals = np.ndarray(size, dtype=int)
+    for i in range(size):
+        rr_intervals[i] = np.abs(peaks[i] - peaks[i + 1])
+    if mode == 'sec':
+        rr_intervals *= 1000/fs
+    elif mode == 'bmp':
+        rr_intervals = rr_intervals / 60
+    return rr_intervals
 
 if __name__ == '__main__':
     templ, _ = filter_templates(processing.FS, 3)

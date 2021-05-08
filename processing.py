@@ -2,15 +2,20 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from data_extraction import FOLDERS
-from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt, sosfiltfilt
+from scipy.signal import butter, iirnotch, lfilter, filtfilt, sosfiltfilt
 from scipy.signal.windows import hann
 from scipy.fft import fft, fftfreq
+from scipy import interpolate
 import pywt
 
 # You should change module FS parameter if signal has another sample frequency
 # abd = 1000 Hz
 # DaISy = 250 Hz
 FS = 1000
+
+
+
+
 
 
 def open_record_abd(record_name: str = 'r01', qrs: bool = True):
