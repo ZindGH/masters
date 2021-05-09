@@ -18,7 +18,7 @@ def filter_templates(fs: int, qrs_template: int = 1):
     qrs = np.zeros((N, 2))
     qrs[:, 1] = np.arange(-0.02, 0.02 + 1 / fs, 1 / fs)  # Time
 
-    ### Templates
+    # Templates
     if qrs_template == 1:
         qrs[:, 0] = -2 * np.exp(-np.power(qrs[:, 1], 2) / np.power(0.007, 2)) * qrs[:, 1] / (np.power(0.007, 2))
     elif qrs_template == 2:
@@ -193,8 +193,8 @@ def ts_method(signal, template_duration: float = 0.12, fs: int = processing.FS, 
         t_dur += 1
     dims = signal.shape
     # if np.max(np.abs(signal[0, :])) < np.max(np.abs(signal[1, :])):
-      # r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
-      # r_peaks = peak_enhance(signal[1, :], peaks=r_peaks, window=0.2)
+    # r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
+    # r_peaks = peak_enhance(signal[1, :], peaks=r_peaks, window=0.2)
     # else:
     r_peaks = find_qrs(signal[0, :], peak_search=peak_search)
     r_peaks = peak_enhance(signal[0, :], peaks=r_peaks, window=0.2)
@@ -263,9 +263,10 @@ def cubic_interpolation(signal, multiplier: int = 2, fs: int = processing.FS, ti
     x = np.arange(N * multiplier)
     interpolated = interpolate.CubicSpline(range(N), signal)
     if time:
-        statement=1
+        statement = 1
     else:
         return interpolated(x)
+
 
 def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS):
     """
@@ -281,10 +282,11 @@ def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS):
     for i in range(size):
         rr_intervals[i] = np.abs(peaks[i] - peaks[i + 1])
     if mode == 'sec':
-        rr_intervals *= 1000/fs
+        rr_intervals *= 1000 / fs
     elif mode == 'bmp':
         rr_intervals = rr_intervals / 60
     return rr_intervals
+
 
 if __name__ == '__main__':
     templ, _ = filter_templates(processing.FS, 3)

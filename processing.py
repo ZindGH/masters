@@ -2,7 +2,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from data_extraction import FOLDERS
-from scipy.signal import butter, iirnotch, lfilter, filtfilt, sosfiltfilt
+from scipy.signal import butter, iirnotch, lfilter, filtfilt, sosfiltfilt, iirnotch, freqz, cheby2
 from scipy.signal.windows import hann
 from scipy.fft import fft, fftfreq
 from scipy import interpolate
@@ -11,11 +11,42 @@ import pywt
 # You should change module FS parameter if signal has another sample frequency
 # abd = 1000 Hz
 # DaISy = 250 Hz
-FS = 1000
+FS = 400
 
 
+def amplitude_response(order: int = 1, freq: int = 50, mode: str = 'bandpass', **kwargs):
+    if mode == 'notch':
+        b, a = iirnotch(freq, 250, fs=FS)
+    elif mode in ['bandpass', 'highpass', 'lowpass']:
+        b, a = butter(order, freq, btype=mode, fs=FS)
+    if mode == 'Chebyshev':
+        b, a = cheby2(order, 20, freq, btype='bandpass', fs=FS)
+    w, h = freqz(b, a, fs=FS)
+    data = abs(h)
+    time = w
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(y=data, x=time))
+    fig.update_layout(
+        title={
+            'text': kwargs['title'],
+            'y': 0.92,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+        font=dict(
+            family="Times New Roman",
+            size=22,
+            color="Black"
+        )
 
+    )
+    if 'xlabel' in kwargs:
+        fig.update_xaxes(title=dict(text=kwargs['xlabel'], font=dict(size=25, color="Black")))
+    if 'ylabel' in kwargs:
+        fig.update_yaxes(title=dict(text=kwargs['ylabel'], font=dict(size=25, color="Black")))
+    fig.show()
 
+    return None
 
 
 def open_record_abd(record_name: str = 'r01', qrs: bool = True):
@@ -259,5 +290,10 @@ def mwa_np(data, window: int = 40, lag: bool = True, **kwargs):
 
 
 if __name__ == '__main__':
-    data = open_record_DaISy()
-    print(data.shape)
+    amplitude_response(order=7, freq=(0.05, 125), mode='bandpass',
+                       title='Butterworth bandpass filter (order: 7)',
+                       xlabel='Frequency, Hz',
+                       ylabel='Amplitude')
+
+    # data = open_record_DaISy()
+    # print(data.shape)
