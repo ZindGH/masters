@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt
 from sklearn.decomposition import FastICA
 import processing
+from scipy import interpolate
 
 
 def filter_templates(fs: int, qrs_template: int = 1):
@@ -17,7 +18,7 @@ def filter_templates(fs: int, qrs_template: int = 1):
     qrs = np.zeros((N, 2))
     qrs[:, 1] = np.arange(-0.02, 0.02 + 1 / fs, 1 / fs)  # Time
 
-    ### Templates
+    # Templates
     if qrs_template == 1:
         qrs[:, 0] = -2 * np.exp(-np.power(qrs[:, 1], 2) / np.power(0.007, 2)) * qrs[:, 1] / (np.power(0.007, 2))
     elif qrs_template == 2:
@@ -48,7 +49,7 @@ def find_qrs(ecg, fs: int = processing.FS, peak_search: str = 'custom'):
     # processing.scatter_beautiful(squared, title="square OUTPUT")
     # mwa = processing.MWA(squared, N)
     mwa = processing.mwa_np(squared, window=N, mode='same')
-    processing.scatter_beautiful(mwa, title="mwa OUTPUT before final zerowing")
+    # processing.scatter_beautiful(mwa, title="mwa OUTPUT before final zerowing")
     # mwa[:int(0.08 * fs)] = 0
     if peak_search == "original":
         mwa_peaks = panPeakDetect(mwa, fs)
@@ -119,6 +120,7 @@ def panPeakDetect(detection, fs):
                     RR_missed = int(1.66 * RR_ave)
 
                 index = index + 1
+    # First possible peak detection
     first_possible_peak = np.argmax(detection[0:int(0.25 * fs)])
     if detection[first_possible_peak] > SPKI:
         signal_peaks[0] = first_possible_peak
@@ -139,6 +141,7 @@ def peak_detect(data, spacing=1, limit=None):
     :param limit: peaks should have value greater or equal
     :return: indexes
     """
+
     ln = data.size
     x = np.zeros(ln + 2 * spacing)
     x[:spacing] = data[0] - 1.e-6
@@ -171,31 +174,33 @@ def fast_ica(x, n: int = 3, func='cube'):
     return fastica.fit_transform(x.T).T
 
 
-def ts_method(signal, template_duration: float = 0.12, fs: int = processing.FS, peak_search: str = 'original',
-              **kwargs):
+def ts_method(signal, r_peaks, template_duration: float = 0.12, fs: int = processing.FS, **kwargs):
     """
     Subtracts ECG signal from aECG with unknown template
 
     Parameters
     ----------
-    signal :  numpy array with dimensions (n,m) where m is number of points; n - samples
+    :param signal :  numpy array with dimensions (n,m) where m is number of points; n - samples
               set of signals, where first is for mQRS detection
-    template_duration : number of s in template (between qrs)
+    :param template_duration : number of s in template (between qrs)
                         if points not odd ==> + 1
-    fs : sampling frequency
-    peak_search : peak search algorithm for "find_qrs" function
+    :param fs : sampling frequency
+    :param peak_search : peak search algorithm for "find_qrs" function
+    :param r_peaks: R peak values
     """
 
     t_dur = round(template_duration * fs)
     if not t_dur % 2 == 0:
         t_dur += 1
     dims = signal.shape
-    if np.max(np.abs(signal[0, :])) < np.max(np.abs(signal[1, :])):
-        r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
-    else:
-        r_peaks = find_qrs(signal[0, :], peak_search=peak_search)
-    processing.scatter_beautiful(r_peaks * 1000/fs, title='peaks')
-    print(len(r_peaks))
+    # if np.max(np.abs(signal[0, :])) < np.max(np.abs(signal[1, :])):
+    # r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
+    # r_peaks = peak_enhance(signal[1, :], peaks=r_peaks, window=0.2)
+    # else:
+
+    # processing.scatter_beautiful(r_peaks * 1000 / fs, title='peaks')
+
+    # print(len(r_peaks))
     # Please, rework it...
     for n in range(dims[0]):
         template = np.full((len(r_peaks), t_dur), np.nan)
@@ -213,12 +218,75 @@ def ts_method(signal, template_duration: float = 0.12, fs: int = processing.FS, 
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel start ' + str(n))
             elif r_ind + t_dur // 2 + 1 > dims[1]:
                 signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2 + 1] -= template_mean[
-                                                                            0:dims[1] - r_ind + t_dur // 2]
+                                                                        0:dims[1] - r_ind + t_dur // 2]
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel end ' + str(n))
             else:
                 signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2] -= template_mean
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel ' + str(n))
     return signal
+
+
+def peak_enhance(signal, peaks, window: int = 0.08, fs: int = processing.FS):
+    """Enhanced peaks with maximum amplitude centering
+    :signal: ECG signal
+    :peaks: detected peaks
+    :window: centering window"""
+    window = int(fs * window)
+    if not window % 2 == 0:
+        window += 1
+    enhanced_peaks = np.zeros(len(peaks), dtype=int)
+    signal = np.abs(signal)
+    for i, peak in enumerate(peaks):
+        if peak < window // 2:
+            enhanced_peaks[i] = np.argmax(signal[0:peak + window // 2 + 1])
+        elif peak + window // 2 + 1 > signal.shape[0]:
+            enhanced_peaks[i] = np.argmax(signal[peak - window // 2:]) + peak - window // 2
+        else:
+            # Because of one-side lag -> window: p - w * 0.25% : p + w * 75%
+            enhanced_peaks[i] = np.argmax(signal[peak - window // 4:peak + 3 * window // 4]) + peak - window // 4
+
+    return enhanced_peaks
+
+
+def cubic_interpolation(signal, multiplier: int = 2, fs: int = processing.FS, time: bool = True):
+    """
+
+
+    :param signal: 1D R-peaks data
+    :param multiplier: final data len is len(signal) * multiplier
+    :param time: if output consists of time values
+    :param fs: Sampling frequency
+    :return: Interpolated signal
+
+    """
+
+    N = len(signal)
+    x = np.arange(N * multiplier)
+    interpolated = interpolate.CubicSpline(range(N), signal)
+    if time:
+        statement = 1
+    else:
+        return interpolated(x)
+
+
+def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS):
+    """
+    Calculate RR intervals from peaks
+
+    :param peaks: peak indexes
+    :param mode: output mode: "sec" (in seconds), "bpm" (beats per minute)
+    :param fs: sampling frequency
+    :return: Heart rate
+    """
+    size = len(peaks) - 1
+    rr_intervals = np.ndarray(size, dtype=int)
+    for i in range(size):
+        rr_intervals[i] = np.abs(peaks[i] - peaks[i + 1])
+    if mode == 'sec':
+        rr_intervals *= 1000 / fs
+    elif mode == 'bmp':
+        rr_intervals = rr_intervals / 60
+    return rr_intervals
 
 
 if __name__ == '__main__':
