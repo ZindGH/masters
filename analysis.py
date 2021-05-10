@@ -141,6 +141,7 @@ def peak_detect(data, spacing=1, limit=None):
     :param limit: peaks should have value greater or equal
     :return: indexes
     """
+
     ln = data.size
     x = np.zeros(ln + 2 * spacing)
     x[:spacing] = data[0] - 1.e-6
@@ -173,19 +174,19 @@ def fast_ica(x, n: int = 3, func='cube'):
     return fastica.fit_transform(x.T).T
 
 
-def ts_method(signal, template_duration: float = 0.12, fs: int = processing.FS, peak_search: str = 'original',
-              **kwargs):
+def ts_method(signal, r_peaks, template_duration: float = 0.12, fs: int = processing.FS, **kwargs):
     """
     Subtracts ECG signal from aECG with unknown template
 
     Parameters
     ----------
-    signal :  numpy array with dimensions (n,m) where m is number of points; n - samples
+    :param signal :  numpy array with dimensions (n,m) where m is number of points; n - samples
               set of signals, where first is for mQRS detection
-    template_duration : number of s in template (between qrs)
+    :param template_duration : number of s in template (between qrs)
                         if points not odd ==> + 1
-    fs : sampling frequency
-    peak_search : peak search algorithm for "find_qrs" function
+    :param fs : sampling frequency
+    :param peak_search : peak search algorithm for "find_qrs" function
+    :param r_peaks: R peak values
     """
 
     t_dur = round(template_duration * fs)
@@ -196,9 +197,8 @@ def ts_method(signal, template_duration: float = 0.12, fs: int = processing.FS, 
     # r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
     # r_peaks = peak_enhance(signal[1, :], peaks=r_peaks, window=0.2)
     # else:
-    r_peaks = find_qrs(signal[0, :], peak_search=peak_search)
-    r_peaks = peak_enhance(signal[0, :], peaks=r_peaks, window=0.2)
-    processing.scatter_beautiful(r_peaks * 1000 / fs, title='peaks')
+
+    # processing.scatter_beautiful(r_peaks * 1000 / fs, title='peaks')
 
     # print(len(r_peaks))
     # Please, rework it...
@@ -235,6 +235,7 @@ def peak_enhance(signal, peaks, window: int = 0.08, fs: int = processing.FS):
     if not window % 2 == 0:
         window += 1
     enhanced_peaks = np.zeros(len(peaks), dtype=int)
+    signal = np.abs(signal)
     for i, peak in enumerate(peaks):
         if peak < window // 2:
             enhanced_peaks[i] = np.argmax(signal[0:peak + window // 2 + 1])

@@ -66,7 +66,7 @@ def open_record_DaISy(record_name: str = '/daisy.npy'):
     return data
 
 
-def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = False):
+def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = False, **kwargs):
     """Plots all channels in different axes. With QRS points if included"""
 
     # Cut data for plotting
@@ -83,7 +83,26 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
 
     else:
         time = np.arange(0, (data_shape[1] * 1 / FS) - 1 / FS, 1 / FS)
-    fig = make_subplots(rows=n_row, cols=n_col)
+
+    if 'title' in kwargs:
+        fig = make_subplots(rows=n_row, cols=n_col, subplot_titles=kwargs['title'])
+        fig.update_layout(
+            font=dict(
+                family="Times New Roman",
+                size=16,
+                color="Black"
+
+            ),
+            showlegend=False)
+    else:
+        fig = make_subplots(rows=n_row, cols=n_col)
+        fig.update_layout(showlegend=True)
+
+    if 'xlabel' in kwargs:
+        fig.update_xaxes(title=dict(text=kwargs['xlabel'], font=dict(size=17, color="Black")))
+    if 'ylabel' in kwargs:
+        fig.update_yaxes(title=dict(text=kwargs['ylabel'], font=dict(size=17, color="Black")))
+
     # Fill subplots
     k_plot = 0
     for row in range(n_row):
@@ -144,7 +163,8 @@ def scatter_beautiful(data, fs: int = FS, time_range: tuple = (0, 1), spectrum: 
     if 'xlabel' in kwargs:
         fig.update_xaxes(title=dict(text=kwargs['xlabel'], font=dict(size=25, color="Black")))
     if 'ylabel' in kwargs:
-        fig.update_yaxes(title=dict(text=kwargs['ylabel'], font=dict(size=25, color="Black")))
+        fig.update_yaxes(title=dict(text=kwargs['ylabel'],
+                                    font=dict(size=25, color="Black")))
     fig.show()
     return None
 
