@@ -13,14 +13,22 @@ def extract_fecg(data):
     data_bwr = processing.bwr_signals(data)
     # FastICA - TS - FastICA
     ica1 = analysis.fast_ica(data_bwr, 4, processing.tanh)
-    processing.plot_record(ica1, time_range=(0, 0.02),
-                           title=["Independent component: {}".format(str(x)) for x in range(data_bwr.shape[0])],
-                           xlabel='Time, s',
-                           ylabel='Amplitude')
-    r_peaks = analysis.find_qrs(ica1[0, :], peak_search='Original')
-    r_peaks = analysis.peak_enhance(ica1[0, :], peaks=r_peaks, window=0.2)
-    subtracted = analysis.ts_method(data_bwr, r_peaks=r_peaks, template_duration=0.12, fs=processing.FS)
-    processing.plot_record(subtracted, time_range=(0, 0.02))
+    # processing.plot_record(ica1, time_range=(0, 0.02),
+    #                        title=["Independent component: {}".format(str(x)) for x in range(data_bwr.shape[0])],
+    #                        xlabel='Time, s',
+    #                        ylabel='Amplitude')
+    r_peaks = analysis.find_qrs(ica1[0, :], peak_search='original')
+    r_peaks = analysis.peak_enhance(ica1[0, :], peaks=r_peaks, window=0.3)
+    subtracted = analysis.ts_method(ica1, r_peaks=r_peaks, template_duration=0.12, fs=processing.FS)
+    # processing.scatter_beautiful(subtracted[1, :], time_range=(0, 0.02),
+    #                              title='<b>Independent component 1',
+    #                              xlabel='<b>Time (s)<b>',
+    #                              ylabel='<b>Amplitude (V)<b>')
+    # processing.plot_record(subtracted, time_range=(0, 0.02),
+    #                        title=["Independent component: {}".format(str(x)) for x in range(data_bwr.shape[0])],
+    #                        xlabel='Time, s',
+    #                        ylabel='Amplitude'
+    #                        )
     # ica2 = analysis.fast_ica(subtracted, 2, processing.tanh)
     # if np.max(np.abs(ica2[0, :])) < np.max(np.abs(ica2[1, :])):
     #     fecg = ica2[1, :]
@@ -35,7 +43,7 @@ def extract_fecg(data):
 if __name__ == '__main__':
     processing.FS = 1000
     data, _, qrs = processing.open_record_abd(qrs=True)
-    processing.plot_record(data[1:, :], time_range=(0, 0.02), qrs=qrs)
+    # processing.plot_record(data[1:, :], time_range=(0, 0.02), qrs=qrs)
     extract_fecg(data[1:, 0:180000])
     # data = extract_fecg(data)
     # _, data_wo_drift = processing.bwr(data[0])

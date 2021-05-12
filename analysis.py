@@ -185,7 +185,6 @@ def ts_method(signal, r_peaks, template_duration: float = 0.12, fs: int = proces
     :param template_duration : number of s in template (between qrs)
                         if points not odd ==> + 1
     :param fs : sampling frequency
-    :param peak_search : peak search algorithm for "find_qrs" function
     :param r_peaks: R peak values
     """
 
@@ -199,31 +198,31 @@ def ts_method(signal, r_peaks, template_duration: float = 0.12, fs: int = proces
     # else:
 
     # processing.scatter_beautiful(r_peaks * 1000 / fs, title='peaks')
-
+    extracted_signal = np.copy(signal)
     # print(len(r_peaks))
     # Please, rework it...
     for n in range(dims[0]):
         template = np.full((len(r_peaks), t_dur), np.nan)
         for num, r_ind in enumerate(r_peaks):
             if r_ind < t_dur // 2:
-                template[num, t_dur // 2 - r_ind - 1:] = signal[n, 0:r_ind + t_dur // 2 + 1]
+                template[num, t_dur // 2 - r_ind - 1:] = extracted_signal[n, 0:r_ind + t_dur // 2 + 1]
             elif r_ind + t_dur // 2 + 1 > dims[1]:
-                template[num, 0:dims[1] - r_ind + t_dur // 2] = signal[n, r_ind - t_dur // 2:]
+                template[num, 0:dims[1] - r_ind + t_dur // 2] = extracted_signal[n, r_ind - t_dur // 2:]
             else:
-                template[num] = signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2]
+                template[num] = extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2]
         template_mean = np.nanmean(template, axis=0)
         for r_ind in r_peaks:
             if r_ind < t_dur // 2:
-                signal[n, 0:r_ind + t_dur // 2 + 1] -= template_mean[t_dur // 2 - r_ind - 1:]
+                extracted_signal[n, 0:r_ind + t_dur // 2 + 1] -= template_mean[t_dur // 2 - r_ind - 1:]
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel start ' + str(n))
             elif r_ind + t_dur // 2 + 1 > dims[1]:
-                signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2 + 1] -= template_mean[
+                extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2 + 1] -= template_mean[
                                                                         0:dims[1] - r_ind + t_dur // 2]
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel end ' + str(n))
             else:
-                signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2] -= template_mean
+                extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2] -= template_mean
                 # processing.scatter_beautiful(components[n, :], title=' subtracted channel ' + str(n))
-    return signal
+    return extracted_signal
 
 
 def peak_enhance(signal, peaks, window: int = 0.08, fs: int = processing.FS):

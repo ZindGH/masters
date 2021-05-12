@@ -93,7 +93,8 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
                 color="Black"
 
             ),
-            showlegend=False)
+            showlegend=False,
+            plot_bgcolor='#fffffe')
     else:
         fig = make_subplots(rows=n_row, cols=n_col)
         fig.update_layout(showlegend=True)
