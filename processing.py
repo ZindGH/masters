@@ -11,7 +11,7 @@ import pywt
 # You should change module FS parameter if signal has another sample frequency
 # abd = 1000 Hz
 # DaISy = 250 Hz
-FS = 400
+FS = 1000
 
 
 def amplitude_response(order: int = 1, freq: int = 50, mode: str = 'bandpass', **kwargs):
@@ -90,11 +90,8 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
             font=dict(
                 family="Times New Roman",
                 size=16,
-                color="Black"
-
-            ),
-            showlegend=False,
-            plot_bgcolor='#fffffe')
+                color="Black"),
+            showlegend=False)
     else:
         fig = make_subplots(rows=n_row, cols=n_col)
         fig.update_layout(showlegend=True)

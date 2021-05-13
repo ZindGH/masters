@@ -4,6 +4,7 @@ from scipy.signal import butter, iirnotch, sosfilt, lfilter, filtfilt
 from sklearn.decomposition import FastICA
 import processing
 from scipy import interpolate
+from scipy.ndimage import median_filter
 
 
 def filter_templates(fs: int, qrs_template: int = 1):
@@ -174,12 +175,13 @@ def fast_ica(x, n: int = 3, func='cube'):
     return fastica.fit_transform(x.T).T
 
 
-def ts_method(signal, r_peaks, template_duration: float = 0.12, fs: int = processing.FS, **kwargs):
+def ts_method(signal, peaks, template_duration: float = 0.12, fs: int = processing.FS, window: int = 10, **kwargs):
     """
     Subtracts ECG signal from aECG with unknown template
 
     Parameters
     ----------
+    :param window: Number of templates for meaning and subtraction (window is not moving)
     :param signal :  numpy array with dimensions (n,m) where m is number of points; n - samples
               set of signals, where first is for mQRS detection
     :param template_duration : number of s in template (between qrs)
@@ -196,32 +198,39 @@ def ts_method(signal, r_peaks, template_duration: float = 0.12, fs: int = proces
     # r_peaks = find_qrs(signal[1, :], peak_search=peak_search)
     # r_peaks = peak_enhance(signal[1, :], peaks=r_peaks, window=0.2)
     # else:
-
     # processing.scatter_beautiful(r_peaks * 1000 / fs, title='peaks')
     extracted_signal = np.copy(signal)
     # print(len(r_peaks))
     # Please, rework it...
+    i = 0
     for n in range(dims[0]):
-        template = np.full((len(r_peaks), t_dur), np.nan)
-        for num, r_ind in enumerate(r_peaks):
-            if r_ind < t_dur // 2:
-                template[num, t_dur // 2 - r_ind - 1:] = extracted_signal[n, 0:r_ind + t_dur // 2 + 1]
-            elif r_ind + t_dur // 2 + 1 > dims[1]:
-                template[num, 0:dims[1] - r_ind + t_dur // 2] = extracted_signal[n, r_ind - t_dur // 2:]
+        for i in range(0, len(peaks), window):
+
+            if i + window > len(peaks):
+                r_peaks = peaks[i:]
             else:
-                template[num] = extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2]
-        template_mean = np.nanmean(template, axis=0)
-        for r_ind in r_peaks:
-            if r_ind < t_dur // 2:
-                extracted_signal[n, 0:r_ind + t_dur // 2 + 1] -= template_mean[t_dur // 2 - r_ind - 1:]
-                # processing.scatter_beautiful(components[n, :], title=' subtracted channel start ' + str(n))
-            elif r_ind + t_dur // 2 + 1 > dims[1]:
-                extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2 + 1] -= template_mean[
-                                                                        0:dims[1] - r_ind + t_dur // 2]
-                # processing.scatter_beautiful(components[n, :], title=' subtracted channel end ' + str(n))
-            else:
-                extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2] -= template_mean
-                # processing.scatter_beautiful(components[n, :], title=' subtracted channel ' + str(n))
+                r_peaks = peaks[i:i + window]
+
+            template = np.full((len(r_peaks), t_dur), np.nan)
+            for num, r_ind in enumerate(r_peaks):
+                if r_ind < t_dur // 2:
+                    template[num, t_dur // 2 - r_ind - 1:] = extracted_signal[n, 0:r_ind + t_dur // 2 + 1]
+                elif r_ind + t_dur // 2 + 1 > dims[1]:
+                    template[num, 0:dims[1] - r_ind + t_dur // 2] = extracted_signal[n, r_ind - t_dur // 2:]
+                else:
+                    template[num] = extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2]
+            template_mean = np.nanmean(template, axis=0)
+            for r_ind in r_peaks:
+                if r_ind < t_dur // 2:
+                    extracted_signal[n, 0:r_ind + t_dur // 2 + 1] -= template_mean[t_dur // 2 - r_ind - 1:]
+                    # processing.scatter_beautiful(components[n, :], title=' subtracted channel start ' + str(n))
+                elif r_ind + t_dur // 2 + 1 > dims[1]:
+                    extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2 + 1] -= template_mean[
+                                                                                      0:dims[1] - r_ind + t_dur // 2]
+                    # processing.scatter_beautiful(components[n, :], title=' subtracted channel end ' + str(n))
+                else:
+                    extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2] -= template_mean
+                    # processing.scatter_beautiful(components[n, :], title=' subtracted channel ' + str(n))
     return extracted_signal
 
 
@@ -247,44 +256,41 @@ def peak_enhance(signal, peaks, window: int = 0.08, fs: int = processing.FS):
     return enhanced_peaks
 
 
-def cubic_interpolation(signal, multiplier: int = 2, fs: int = processing.FS, time: bool = True):
+def median_filtration(signal, kernel: tuple = (4,)):
     """
 
 
+    :param kernel: window tuple (W,)
     :param signal: 1D R-peaks data
-    :param multiplier: final data len is len(signal) * multiplier
-    :param time: if output consists of time values
-    :param fs: Sampling frequency
-    :return: Interpolated signal
+    :return: Interpolated signal, new sample frequency
 
     """
+    med = median_filter(signal, size=kernel)
 
-    N = len(signal)
-    x = np.arange(N * multiplier)
-    interpolated = interpolate.CubicSpline(range(N), signal)
-    if time:
-        statement = 1
-    else:
-        return interpolated(x)
+    return med
 
 
-def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS):
+def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS, time: bool = False):
     """
     Calculate RR intervals from peaks
 
+    :param time: True value will also return time approximate time array with T_max = sum(RR) at position 2
     :param peaks: peak indexes
-    :param mode: output mode: "sec" (in seconds), "bpm" (beats per minute)
+    :param mode: output mode: "ms" (in milli seconds), "bpm" (beats per minute)
     :param fs: sampling frequency
-    :return: Heart rate
+    :return: Heart rate, new sample frequency
     """
     size = len(peaks) - 1
-    rr_intervals = np.ndarray(size, dtype=int)
+    rr_intervals = np.ndarray(size, dtype=float)
     for i in range(size):
         rr_intervals[i] = np.abs(peaks[i] - peaks[i + 1])
-    if mode == 'sec':
-        rr_intervals *= 1000 / fs
-    elif mode == 'bmp':
-        rr_intervals = rr_intervals / 60
+    if mode == 'ms':
+        rr_intervals *= (1000 / fs)
+    elif mode == 'bpm':
+        rr_intervals = 60 / (rr_intervals / fs)
+    if time:
+        t_max = peaks[-1] / fs
+        return rr_intervals, t_max
     return rr_intervals
 
 
