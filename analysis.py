@@ -5,10 +5,11 @@ from sklearn.decomposition import FastICA
 import processing
 from scipy import interpolate
 from scipy.ndimage import median_filter
+import heartpy as hp
 
 
 def filter_templates(fs: int, qrs_template: int = 1):
-    """Creates fetal QRS and PQRST templates from [22]
+    """Creates fetal QRS and PQRST templates from [22] for match_filter
     qrs: (1) h' = -0.007^2 * t * e^(-t^2/0.007^2)
          (2) h = e^(-t^2/0.007^2)
          (3) h3 = −0.2 * e^(-(t + 0.007)^2 / 0.005^2)
@@ -290,8 +291,33 @@ def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS, time: bool =
         rr_intervals = 60 / (rr_intervals / fs)
     if time:
         t_max = peaks[-1] / fs
-        return rr_intervals, t_max
+        F = size / t_max
+        return rr_intervals, F
     return rr_intervals
+
+
+def calculate_time_features(rr_intervals, limits: tuple = None):
+    """
+
+    :param limits: low/high limits in values of rr_intervals(bpm/ms)
+    :param rr_intervals:
+    :return: features dict: (mean, sdnn, sdsd, rmssd), if limits included outputs outhigh, outlow
+    """
+    rr_len = len(rr_intervals)
+    rr_diff = np.array([np.abs(rr_intervals[i] - rr_intervals[i + 1]) for i in range(rr_len - 1)])
+    features_dict = {
+        'mean': np.average(rr_intervals),
+        'sdnn': np.std(rr_intervals),
+        'sdsd': np.std(rr_diff),
+        'rmssd': np.sqrt(np.average(np.square(rr_diff)))
+    }
+    if limits:
+        outhigh = len(rr_intervals[rr_intervals > limits[1]]) * 100 // rr_len
+        outlow = len(rr_intervals[rr_intervals < limits[0]]) * 100 // rr_len
+        features_dict['outlow'] = outlow
+        features_dict['outhigh'] = outhigh
+
+    return features_dict
 
 
 if __name__ == '__main__':

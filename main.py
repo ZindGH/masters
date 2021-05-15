@@ -19,7 +19,7 @@ def extract_fecg(data):
     #                        ylabel='Amplitude')
     r_peaks = analysis.find_qrs(ica1[0, :], peak_search='original')
     r_peaks = analysis.peak_enhance(ica1[0, :], peaks=r_peaks, window=0.3)
-    subtracted = analysis.ts_method(ica1, peaks=r_peaks, template_duration=0.12, fs=processing.FS)
+    subtracted = analysis.ts_method(ica1, peaks=r_peaks, template_duration=0.12, fs=processing.FS, window=10)
     # processing.scatter_beautiful(subtracted[3, :], time_range=(0, 1),
     #                              title='<b>Independent component 1',
     #                              xlabel='<b>Time (s)<b>',
@@ -53,12 +53,17 @@ def rr_analysis(fetal_ecg):
     """
     peaks = analysis.find_qrs(fetal_ecg, processing.FS, peak_search='Original')
     enhanced_peaks = analysis.peak_enhance(fetal_ecg, peaks, window=0.08)
-    rr_intervals, tmax = analysis.calculate_rr(enhanced_peaks, mode='bpm', time=True)
-    med_rr = analysis.median_filtration(rr_intervals)
-    processing.scatter_beautiful(med_rr,
-                                 title='Heart Rate Variability',
-                                 xlabel='Time, (s)',
-                                 ylabel='Heart Rate (bpm)')
+    rr_intervals, fs_rr = analysis.calculate_rr(enhanced_peaks, mode='bpm', time=True)
+    med_rr = analysis.median_filtration(rr_intervals, kernel=(6,))
+    # processing.scatter_beautiful(med_rr, fs=fs_rr,
+    #                              title='Heart Rate Variability',
+    #                              xlabel='Time, (s)',
+    #                              ylabel='Heart Rate (bpm)')
+    # processing.scatter_beautiful(rr_intervals, fs=fs_rr,
+    #                              title='Heart Rate Variability',
+    #                              xlabel='Time, (s)',
+    #                              ylabel='Heart Rate (bpm)')
+
     return None
 
 
@@ -69,17 +74,18 @@ if __name__ == '__main__':
     preprocessed = preprocess(data[1:, 0:180000])
     f_ecg = extract_fecg(preprocessed)
     rr_analysis(f_ecg)
-    rr_intervals, fs = analysis.calculate_rr(qrs[0:385], mode='bpm', time=True)
-    processing.scatter_beautiful(rr_intervals,
-                                 title='Heart Rate Variability',
-                                 xlabel='Time, (s)',
-                                 ylabel='Heart Rate (bpm)')
+    rr_intervals, fs = analysis.calculate_rr(qrs[0:385] * 1000, mode='bpm', time=True)
+    # processing.scatter_beautiful(rr_intervals,
+    #                              title='Heart Rate Variability',
+    #                              xlabel='Time, (s)',
+    #                              ylabel='Heart Rate (bpm)')
 
     med_rr = analysis.median_filtration(rr_intervals)
-    processing.scatter_beautiful(med_rr, fs=fs,
-                                 title='Heart Rate Variability',
-                                 xlabel='Time, (s)',
-                                 ylabel='Heart Rate (bpm)')
+    print(analysis.calculate_time_features(processing.bpm2sec(rr_intervals), limits=(450, 500)))
+    # processing.scatter_beautiful(med_rr, fs=fs,
+    #                              title='Heart Rate Variability',
+    #                              xlabel='Time, (s)',
+    #                              ylabel='Heart Rate (bpm)')
 
     # data = extract_fecg(data)
     # _, data_wo_drift = processing.bwr(data[0])

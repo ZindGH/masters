@@ -49,6 +49,17 @@ def amplitude_response(order: int = 1, freq: int = 50, mode: str = 'bandpass', *
     return None
 
 
+def bpm2sec(bpm, reverse: bool = False):
+    """
+    Makes a conversion bpm-ms
+    :param reverse: True if reverse ms to bpm
+    :param bpm: numpy array of beats per minute values
+    :return: numpy array of ms values
+    """
+
+    return np.rint(60000 / (bpm + np.power(10.0, -6)))
+
+
 def open_record_abd(record_name: str = 'r01', qrs: bool = True):
     """ Loads data, channel info and qrs timestamps """
     folder = FOLDERS['abd'] + '_npy/'
@@ -308,10 +319,10 @@ def mwa_np(data, window: int = 40, lag: bool = True, **kwargs):
 
 
 if __name__ == '__main__':
-    amplitude_response(order=7, freq=(0.05, 125), mode='bandpass',
-                       title='Butterworth bandpass filter (order: 7)',
-                       xlabel='Frequency, Hz',
-                       ylabel='Amplitude')
-
+    # amplitude_response(order=7, freq=(0.05, 125), mode='bandpass',
+    #                    title='Butterworth bandpass filter (order: 7)',
+    #                    xlabel='Frequency, Hz',
+    #                    ylabel='Amplitude')
+    print(bpm2sec(np.arange(5) * 323))
     # data = open_record_DaISy()
     # print(data.shape)
