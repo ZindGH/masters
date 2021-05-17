@@ -327,9 +327,72 @@ def calculate_time_features(rr_intervals, limits: tuple = None, epochs: int = 1)
     return features_dict
 
 
-def find_signal_morphology(rr_intervals, fs):
-    # for
-    return None
+def find_signal_morphology(rr_intervals, fs: float = 4):
+    baseline = calculate_time_features(rr_intervals=rr_intervals)['baseline']
+    vhr = rr_intervals - baseline
+    accel_values = np.sort(vhr[vhr > 15])  # Change for right value
+    decel_values = np.sort(vhr[vhr < -15])  # Change for right value
+    accel_args = np.empty(accel_values.shape)
+    decel_args = np.empty(decel_values.shape)
+    acceleration_array = []
+    deceleration_array = []
+    k = 0
+    for i, x in enumerate(vhr):
+        if x in accel_values:
+            accel_args[k] = int(i)
+            k += 1
+    # Make acceleration array of tuples (start, end)
+    if len(accel_values) > 2:
+        start = accel_args[0]
+        end = accel_args[0]
+        for i in range(len(accel_args) - 1):
+            if (accel_args[i + 1] - accel_args[i] >= 2) or (i + 1 == len(accel_args) - 1):
+                acceleration_array.append((start, end))
+                start = accel_args[i + 1]
+            else:
+                end = accel_args[i + 1]
+    # Make deceleration array of tuples (start, end)
+    k = 0
+    for i, x in enumerate(vhr):
+        if x in decel_values:
+            decel_args[k] = i
+            k += 1
+    if len(decel_values) > 2:
+        start = decel_args[0]
+        end = decel_args[0]
+        for i in range(len(accel_args) - 1):
+            if (accel_args[i + 1] - accel_args[i] >= 2) or (i + 1 == len(accel_args)):
+                deceleration_array.append((start, end))
+                start = accel_args[i + 1]
+            else:
+                end = accel_args[i + 1]
+    delete_array = np.concatenate((accel_args, decel_args))
+    vhr_pure = np.delete(vhr, delete_array)
+    vhr_std = np.std(vhr_pure)
+    return baseline, vhr_std, acceleration_array, deceleration_array
+
+
+def fhr_decision(rr_intervals, fs, acel_decel_num: bool = True):
+    baseline, vhr_std, accelerations, decelerations = find_signal_morphology(rr_intervals)
+    acceleration_num = 0
+    deceleration_num = 0
+    for (start, stop) in accelerations:
+        if (stop - start) * fs > 15:
+            acceleration_num += 1
+    for (start, stop) in decelerations:
+        if (stop - start) * fs > 10:
+            deceleration_num += 1
+
+    # Decision making
+    level = 0
+    if (deceleration_num > 0) or (100 < baseline < 120) or (baseline > 160):
+        level = 1
+    if (baseline > 180) or (baseline < 100) or (vhr_std <= 5) or (vhr_std >= 25):
+        level = 2
+
+    if acel_decel_num:
+        return level, acceleration_num, deceleration_num
+    return level
 
 
 if __name__ == '__main__':

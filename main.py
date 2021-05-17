@@ -74,20 +74,18 @@ if __name__ == '__main__':
     preprocessed = preprocess(data[1:, 0:180000])
     f_ecg = extract_fecg(preprocessed)
     rr_intervals, fs = rr_analysis(f_ecg)
-    print(analysis.calculate_time_features(rr_intervals=rr_intervals))
-
+    # print(analysis.calculate_time_features(rr_intervals=rr_intervals))
+    # analysis.find_signal_morphology(rr_intervals, fs=fs)
     # rr_intervals, fs = analysis.calculate_rr(qrs[0:385] * 1000, mode='bpm', time=True)
     # processing.scatter_beautiful(rr_intervals, fs=fs,
     #                              title='Heart Rate Variability',
     #                              xlabel='Time, (s)',
     #                              ylabel='Heart Rate (bpm)')
 
-
-
-    # fhr_toco = processing.open_record_fhr()
-    # med_rr = analysis.median_filtration(fhr_toco[1, :], kernel=(4,))
+    fhr_toco = processing.open_record_fhr()
+    med_rr = analysis.median_filtration(fhr_toco[1, :], kernel=(4,))
     # # print(analysis.calculate_time_features(processing.bpm2sec(rr_intervals), limits=(450, 500)))
-    processing.scatter_beautiful(rr_intervals, fs=fs,
+    processing.scatter_beautiful(med_rr, fs=4,
                                  title='Heart Rate Variability',
                                  xlabel='Time, (s)',
                                  ylabel='Heart Rate (bpm)')
