@@ -4,7 +4,8 @@ import os
 
 FOLDERS = {'abd': 'abd2012',
            'arr': 'arr_nr2019',
-           'DaISy': 'DaiSy'}
+           'DaISy': 'DaiSy',
+           'FHR': 'fhr'}
 
 
 def space_separ2np(path: str = 'DaISy/FOETAL_ECG.dat'):
@@ -37,5 +38,27 @@ def edf2npy_save(folder_name: str = FOLDERS['abd'],
     return None
 
 
+def fhr2npy_save(folder_name: str = FOLDERS['FHR']):
+    """
+
+    :return:
+    """
+    new_folder = folder_name + '_npy'
+    if not os.path.isdir(new_folder):
+        os.mkdir(new_folder)
+    if not folder_name.endswith('/'):
+        folder_name += '/'
+    for i, name in enumerate(os.listdir(folder_name)):
+        if name.endswith('.fhr'):
+            file = open(file=folder_name + name, mode='rb')
+            toco = np.fromfile(file, dtype=np.uint8, offset=3)[5::6].reshape((-1, 1)) / 2
+            file = open(file=folder_name + name, mode='rb')
+            fhr = np.fromfile(file, dtype=np.uint16)[2::3].reshape((-1, 1)) / 4
+            fhr_toco = np.concatenate((fhr, toco), axis=1)
+            np.save(new_folder + '/' + 'fhr_toco' + str(i), fhr_toco)
+    return None
+
+
 if __name__ == '__main__':
-    space_separ2np()
+    fhr2npy_save(folder_name='fhr')
+    # space_separ2np()

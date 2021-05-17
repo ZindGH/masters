@@ -77,6 +77,12 @@ def open_record_DaISy(record_name: str = '/daisy.npy'):
     return data
 
 
+def open_record_fhr(record_name: str = '/fhr_toco0.npy'):
+    folder = FOLDERS['FHR'] + '_npy/'
+    data = np.load(folder + record_name).T
+    return data
+
+
 def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = False, **kwargs):
     """Plots all channels in different axes. With QRS points if included"""
 
@@ -323,6 +329,8 @@ if __name__ == '__main__':
     #                    title='Butterworth bandpass filter (order: 7)',
     #                    xlabel='Frequency, Hz',
     #                    ylabel='Amplitude')
-    print(bpm2sec(np.arange(5) * 323))
+    # print(bpm2sec(np.arange(5) * 323))
+    print(open_record_fhr().shape)
+
     # data = open_record_DaISy()
     # print(data.shape)

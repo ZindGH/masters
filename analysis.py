@@ -296,20 +296,27 @@ def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS, time: bool =
     return rr_intervals
 
 
-def calculate_time_features(rr_intervals, limits: tuple = None):
+def calculate_time_features(rr_intervals, limits: tuple = None, epochs: int = 1):
     """
 
+    :param epochs: number of 1m epochs, if epoch > 1, return list of dicts
     :param limits: low/high limits in values of rr_intervals(bpm/ms)
     :param rr_intervals:
     :return: features dict: (mean, sdnn, sdsd, rmssd), if limits included outputs outhigh, outlow
     """
     rr_len = len(rr_intervals)
     rr_diff = np.array([np.abs(rr_intervals[i] - rr_intervals[i + 1]) for i in range(rr_len - 1)])
+    # Baseline with histogram
+    hist = np.histogram(np.rint(rr_intervals), bins=15)
+    bin_max = np.argmax(hist[0])
+    baseline = (hist[1][bin_max] + hist[1][bin_max + 1]) / 2
+    # EDIT IT
     features_dict = {
         'mean': np.average(rr_intervals),
         'sdnn': np.std(rr_intervals),
         'sdsd': np.std(rr_diff),
-        'rmssd': np.sqrt(np.average(np.square(rr_diff)))
+        'rmssd': np.sqrt(np.average(np.square(rr_diff))),
+        'baseline': baseline
     }
     if limits:
         outhigh = len(rr_intervals[rr_intervals > limits[1]]) * 100 // rr_len
@@ -318,6 +325,11 @@ def calculate_time_features(rr_intervals, limits: tuple = None):
         features_dict['outhigh'] = outhigh
 
     return features_dict
+
+
+def find_signal_morphology(rr_intervals, fs):
+    # for
+    return None
 
 
 if __name__ == '__main__':

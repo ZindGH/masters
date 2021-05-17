@@ -49,7 +49,7 @@ def rr_analysis(fetal_ecg):
     Analysis fetal VHR
 
     :param fetal_ecg: Fetal ECG
-    :return: Nothing
+    :return: rr_intervals, sample frequency
     """
     peaks = analysis.find_qrs(fetal_ecg, processing.FS, peak_search='Original')
     enhanced_peaks = analysis.peak_enhance(fetal_ecg, peaks, window=0.08)
@@ -64,7 +64,7 @@ def rr_analysis(fetal_ecg):
     #                              xlabel='Time, (s)',
     #                              ylabel='Heart Rate (bpm)')
 
-    return None
+    return med_rr, fs_rr
 
 
 if __name__ == '__main__':
@@ -73,19 +73,24 @@ if __name__ == '__main__':
     # processing.plot_record(data[1:, :], time_range=(0, 0.02), qrs=qrs)
     preprocessed = preprocess(data[1:, 0:180000])
     f_ecg = extract_fecg(preprocessed)
-    rr_analysis(f_ecg)
-    rr_intervals, fs = analysis.calculate_rr(qrs[0:385] * 1000, mode='bpm', time=True)
-    # processing.scatter_beautiful(rr_intervals,
+    rr_intervals, fs = rr_analysis(f_ecg)
+    print(analysis.calculate_time_features(rr_intervals=rr_intervals))
+
+    # rr_intervals, fs = analysis.calculate_rr(qrs[0:385] * 1000, mode='bpm', time=True)
+    # processing.scatter_beautiful(rr_intervals, fs=fs,
     #                              title='Heart Rate Variability',
     #                              xlabel='Time, (s)',
     #                              ylabel='Heart Rate (bpm)')
 
-    med_rr = analysis.median_filtration(rr_intervals)
-    print(analysis.calculate_time_features(processing.bpm2sec(rr_intervals), limits=(450, 500)))
-    # processing.scatter_beautiful(med_rr, fs=fs,
-    #                              title='Heart Rate Variability',
-    #                              xlabel='Time, (s)',
-    #                              ylabel='Heart Rate (bpm)')
+
+
+    # fhr_toco = processing.open_record_fhr()
+    # med_rr = analysis.median_filtration(fhr_toco[1, :], kernel=(4,))
+    # # print(analysis.calculate_time_features(processing.bpm2sec(rr_intervals), limits=(450, 500)))
+    processing.scatter_beautiful(rr_intervals, fs=fs,
+                                 title='Heart Rate Variability',
+                                 xlabel='Time, (s)',
+                                 ylabel='Heart Rate (bpm)')
 
     # data = extract_fecg(data)
     # _, data_wo_drift = processing.bwr(data[0])
