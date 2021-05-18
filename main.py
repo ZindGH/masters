@@ -82,13 +82,14 @@ if __name__ == '__main__':
     #                              xlabel='Time, (s)',
     #                              ylabel='Heart Rate (bpm)')
 
-    fhr_toco = processing.open_record_fhr()
-    med_rr = analysis.median_filtration(fhr_toco[1, :], kernel=(4,))
-    # # print(analysis.calculate_time_features(processing.bpm2sec(rr_intervals), limits=(450, 500)))
-    processing.scatter_beautiful(med_rr, fs=4,
-                                 title='Heart Rate Variability',
-                                 xlabel='Time, (s)',
-                                 ylabel='Heart Rate (bpm)')
+    # fhr_toco = processing.open_record_fhr()
+    # med_rr = analysis.median_filtration(fhr_toco[1, :], kernel=(4,))
+    print(analysis.calculate_time_features(processing.bpm2sec(rr_intervals), limits=(450, 500)))
+    print(analysis.find_signal_morphology(rr_intervals, fs))
+    # processing.scatter_beautiful(med_rr, fs=4,
+    #                              title='Heart Rate Variability',
+    #                              xlabel='Time, (s)',
+    #                              ylabel='Heart Rate (bpm)')
 
     # data = extract_fecg(data)
     # _, data_wo_drift = processing.bwr(data[0])

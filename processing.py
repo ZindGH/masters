@@ -57,7 +57,7 @@ def bpm2sec(bpm, reverse: bool = False):
     :return: numpy array of ms values
     """
 
-    return np.rint(60000 / (bpm + np.power(10.0, -6)))
+    return 60000 / (bpm + np.power(10.0, -6))
 
 
 def open_record_abd(record_name: str = 'r01', qrs: bool = True):

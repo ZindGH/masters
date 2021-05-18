@@ -305,12 +305,12 @@ def calculate_time_features(rr_intervals, limits: tuple = None, epochs: int = 1)
     :return: features dict: (mean, sdnn, sdsd, rmssd), if limits included outputs outhigh, outlow
     """
     rr_len = len(rr_intervals)
-    rr_diff = np.array([np.abs(rr_intervals[i] - rr_intervals[i + 1]) for i in range(rr_len - 1)])
+    rr_diff = np.array([(rr_intervals[i] - rr_intervals[i + 1]) for i in range(rr_len - 1)])
     # Baseline with histogram
     hist = np.histogram(np.rint(rr_intervals), bins=15)
     bin_max = np.argmax(hist[0])
     baseline = (hist[1][bin_max] + hist[1][bin_max + 1]) / 2
-    # EDIT IT
+    # EDIT IT for time window (epoch)
     features_dict = {
         'mean': np.average(rr_intervals),
         'sdnn': np.std(rr_intervals),
@@ -332,8 +332,8 @@ def find_signal_morphology(rr_intervals, fs: float = 4):
     vhr = rr_intervals - baseline
     accel_values = np.sort(vhr[vhr > 15])  # Change for right value
     decel_values = np.sort(vhr[vhr < -15])  # Change for right value
-    accel_args = np.empty(accel_values.shape)
-    decel_args = np.empty(decel_values.shape)
+    accel_args = np.empty(accel_values.shape, dtype=int)
+    decel_args = np.empty(decel_values.shape, dtype=int)
     acceleration_array = []
     deceleration_array = []
     k = 0
@@ -368,8 +368,8 @@ def find_signal_morphology(rr_intervals, fs: float = 4):
                 end = accel_args[i + 1]
     delete_array = np.concatenate((accel_args, decel_args))
     vhr_pure = np.delete(vhr, delete_array)
-    vhr_std = np.std(vhr_pure)
-    return baseline, vhr_std, acceleration_array, deceleration_array
+    AmpStd = np.sqrt(np.mean(np.square(vhr_pure)))
+    return baseline, AmpStd, acceleration_array, deceleration_array
 
 
 def fhr_decision(rr_intervals, fs, acel_decel_num: bool = True):
