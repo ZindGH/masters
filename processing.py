@@ -11,7 +11,7 @@ import pywt
 # You should change module FS parameter if signal has another sample frequency
 # abd = 1000 Hz
 # DaISy = 250 Hz
-FS = 400
+FS = 1000
 
 
 def amplitude_response(order: int = 1, freq: int = 50, mode: str = 'bandpass', **kwargs):
@@ -49,6 +49,17 @@ def amplitude_response(order: int = 1, freq: int = 50, mode: str = 'bandpass', *
     return None
 
 
+def bpm2sec(bpm, reverse: bool = False):
+    """
+    Makes a conversion bpm-ms
+    :param reverse: True if reverse ms to bpm
+    :param bpm: numpy array of beats per minute values
+    :return: numpy array of ms values
+    """
+
+    return 60000 / (bpm + np.power(10.0, -6))
+
+
 def open_record_abd(record_name: str = 'r01', qrs: bool = True):
     """ Loads data, channel info and qrs timestamps """
     folder = FOLDERS['abd'] + '_npy/'
@@ -62,6 +73,12 @@ def open_record_abd(record_name: str = 'r01', qrs: bool = True):
 
 def open_record_DaISy(record_name: str = '/daisy.npy'):
     folder = FOLDERS['DaISy']
+    data = np.load(folder + record_name).T
+    return data
+
+
+def open_record_fhr(record_name: str = '/fhr_toco0.npy'):
+    folder = FOLDERS['FHR'] + '_npy/'
     data = np.load(folder + record_name).T
     return data
 
@@ -90,11 +107,8 @@ def plot_record(data, qrs=None, time_range: tuple = (0, 1), fft_plot: bool = Fal
             font=dict(
                 family="Times New Roman",
                 size=16,
-                color="Black"
-
-            ),
-            showlegend=False,
-            plot_bgcolor='#fffffe')
+                color="Black"),
+            showlegend=False)
     else:
         fig = make_subplots(rows=n_row, cols=n_col)
         fig.update_layout(showlegend=True)
@@ -311,10 +325,12 @@ def mwa_np(data, window: int = 40, lag: bool = True, **kwargs):
 
 
 if __name__ == '__main__':
-    amplitude_response(order=7, freq=(0.05, 125), mode='bandpass',
-                       title='Butterworth bandpass filter (order: 7)',
-                       xlabel='Frequency, Hz',
-                       ylabel='Amplitude')
+    # amplitude_response(order=7, freq=(0.05, 125), mode='bandpass',
+    #                    title='Butterworth bandpass filter (order: 7)',
+    #                    xlabel='Frequency, Hz',
+    #                    ylabel='Amplitude')
+    # print(bpm2sec(np.arange(5) * 323))
+    print(open_record_fhr().shape)
 
     # data = open_record_DaISy()
     # print(data.shape)
