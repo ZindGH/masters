@@ -328,6 +328,12 @@ def calculate_time_features(rr_intervals, limits: tuple = None, epochs: int = 1)
 
 
 def find_signal_morphology(rr_intervals, fs: float = 4):
+    """
+
+    :param rr_intervals: array of RR intervals
+    :param fs: sample frequency (is not used)
+    :return: Baseline, variation amplitude, accelerations, decelerations
+    """
     baseline = calculate_time_features(rr_intervals=rr_intervals)['baseline']
     vhr = rr_intervals - baseline
     accel_values = np.sort(vhr[vhr > 15])  # Change for right value
@@ -373,6 +379,13 @@ def find_signal_morphology(rr_intervals, fs: float = 4):
 
 
 def fhr_decision(rr_intervals, fs, acel_decel_num: bool = True):
+    """
+
+    :param rr_intervals: RR intervals
+    :param fs: sample frequency
+    :param acel_decel_num: True, if output number of accelerations and decelerations (Mild+: bpm > 15, t > 15s)
+    :return:
+    """
     baseline, vhr_std, accelerations, decelerations = find_signal_morphology(rr_intervals)
     acceleration_num = 0
     deceleration_num = 0
@@ -395,10 +408,37 @@ def fhr_decision(rr_intervals, fs, acel_decel_num: bool = True):
     return level
 
 
+def evaluation_metrics(pred_peaks, true_peaks, fecg_fs: int = 1000, accept_window: int = 10):
+    """
+
+    :param pred_peaks: Array of predicted peaks
+    :param true_peaks: Array of actual peaks
+    :param fecg_fs: Sample frequency of fetal ECG
+    :param accept_window: value of milliseconds, peak tolerance
+    :return:
+    """
+    tp = 0
+    fp = 0
+    for pred_peak in pred_peaks:
+        peak_diff = true_peaks - pred_peak
+        if np.min(np.abs(peak_diff)) > accept_window * 1000 / fecg_fs:
+            fp += 1
+        else:
+            tp += 1
+    fn = len(true_peaks) - tp
+
+    tpr = tp / (tp + fn)
+    ppv = tp / (tp + fp)
+    f1 = 2 * (tpr * ppv) / (tpr + ppv)
+    acc = tp / (tp + fn + fp)
+    print(tp, fp, fn)
+    return tpr, ppv, acc, f1
+
+
 if __name__ == '__main__':
-    templ, _ = filter_templates(processing.FS, 3)
+    # templ, _ = filter_templates(processing.FS, 3)
     qrs_peaks = find_qrs()
-    # Plot template
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=templ[:, 1], y=templ[:, 0]))
-    fig.show()
+    # # Plot template
+    # fig = go.Figure()
+    # fig.add_trace(go.Scatter(x=templ[:, 1], y=templ[:, 0]))
+    # fig.show()
