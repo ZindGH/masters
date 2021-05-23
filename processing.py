@@ -78,6 +78,14 @@ def open_record_DaISy(record_name: str = '/daisy.npy'):
 
 
 def open_record_fhr(record_name: str = '/fhr_toco0.npy'):
+    """
+    Fetal heart rate signal dataset for training morphological analysis
+     methods and evaluating them against an expert consensus
+     !!Sample frequency is 4 Hz for both FHR and UA!!
+
+    :param record_name:
+    :return:
+    """
     folder = FOLDERS['FHR'] + '_npy/'
     data = np.load(folder + record_name).T
     return data

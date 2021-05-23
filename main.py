@@ -70,15 +70,30 @@ def rr_analysis(fetal_ecg):
 
 
 if __name__ == '__main__':
-    processing.FS = 1000
-    data, _, qrs = processing.open_record_abd(record_name='r10', qrs=True)
-    processing.plot_record(data[:, :], time_range=(0, 1), qrs=qrs)
-    preprocessed = preprocess(data[1:, 0:150000])
-    f_ecg = extract_fecg(preprocessed, qrs)
+    processing.FS = 4
+    # data, _, qrs = processing.open_record_abd(record_name='r10', qrs=True)
+    # processing.plot_record(data[:, :], time_range=(0, 1), qrs=qrs)
+    # preprocessed = preprocess(data[1:, 0:150000])
+    # f_ecg = extract_fecg(preprocessed, qrs)
     # rr_intervals, fs = rr_analysis(f_ecg)
-    peaks = analysis.find_qrs(f_ecg, processing.FS, peak_search='Original')
-    enhanced_peaks = analysis.peak_enhance(f_ecg, peaks, window=0.08)
-    print(analysis.evaluation_metrics(enhanced_peaks, qrs[0:323] * 1000))
+    rr_toco = processing.open_record_fhr('fhr_toco27.npy')
+    rr_intervals = analysis.median_filtration(rr_toco[0, :], (4,))
+    toco = rr_toco[1, :]
+    processing.scatter_beautiful(rr_intervals, fs=4,
+                                 title='Fetal Heart Rate',
+                                 xlabel='Time (s)',
+                                 ylabel='Heart Rate (bpm)')
+    processing.plot_record(np.vstack([rr_intervals, toco]), time_range=(0, 1),
+                           title=["Signal channel: {}".format(str(x)) for x in range(rr_intervals.shape[0])],
+                           xlabel='Time, s',
+                           ylabel='Amplitude')
+    rr_intervals_ms = processing.bpm2sec(rr_intervals)
+    print(analysis.calculate_time_features(rr_intervals))
+    b, vsr_amp, acel, decel = analysis.find_signal_morphology(rr_intervals)
+    print(len(acel), len(decel), vsr_amp)
+    print(analysis.fhr_decision(rr_intervals, fs=4, acel_decel_num=True, severe=True))
+
+    # print(analysis.evaluation_metrics(peaks))
     # print(analysis.calculate_time_features(rr_intervals=rr_intervals))
     # analysis.find_signal_morphology(rr_intervals, fs=fs)
     # rr_intervals, fs = analysis.calculate_rr(qrs[0:385] * 1000, mode='bpm', time=True)

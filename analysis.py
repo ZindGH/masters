@@ -338,8 +338,8 @@ def find_signal_morphology(rr_intervals, fs: float = 4):
     vhr = rr_intervals - baseline
     accel_values = np.sort(vhr[vhr > 15])  # Change for right value
     decel_values = np.sort(vhr[vhr < -15])  # Change for right value
-    accel_args = np.empty(accel_values.shape, dtype=int)
-    decel_args = np.empty(decel_values.shape, dtype=int)
+    accel_args = np.zeros(accel_values.shape, dtype=int)
+    decel_args = np.zeros(decel_values.shape, dtype=int)
     acceleration_array = []
     deceleration_array = []
     k = 0
@@ -348,7 +348,7 @@ def find_signal_morphology(rr_intervals, fs: float = 4):
             accel_args[k] = int(i)
             k += 1
     # Make acceleration array of tuples (start, end)
-    if len(accel_values) > 2:
+    if np.sum(accel_values > 0):
         start = accel_args[0]
         end = accel_args[0]
         for i in range(len(accel_args) - 1):
@@ -363,48 +363,69 @@ def find_signal_morphology(rr_intervals, fs: float = 4):
         if x in decel_values:
             decel_args[k] = i
             k += 1
-    if len(decel_values) > 2:
+    if np.sum(decel_values < 0) > 2:
         start = decel_args[0]
         end = decel_args[0]
-        for i in range(len(accel_args) - 1):
-            if (accel_args[i + 1] - accel_args[i] >= 2) or (i + 1 == len(accel_args)):
+        for i in range(len(decel_args) - 1):
+            if (decel_args[i + 1] - decel_args[i] >= 2) or (i + 1 == len(decel_args)):
                 deceleration_array.append((start, end))
-                start = accel_args[i + 1]
+                start = decel_args[i + 1]
             else:
-                end = accel_args[i + 1]
+                end = decel_args[i + 1]
     delete_array = np.concatenate((accel_args, decel_args))
     vhr_pure = np.delete(vhr, delete_array)
     AmpStd = np.sqrt(np.mean(np.square(vhr_pure)))
     return baseline, AmpStd, acceleration_array, deceleration_array
 
 
-def fhr_decision(rr_intervals, fs, acel_decel_num: bool = True):
-    """
+def fhr_decision(rr_intervals, fs, acel_decel_num: bool = True, prolonged: bool = True, severe: bool = True):
+    """ Level and  accelerations/decelerations calculation
 
+
+    :param prolonged: Outputs prolonged decelerations
+    :param severe: Outputs severe decelerations
     :param rr_intervals: RR intervals
     :param fs: sample frequency
-    :param acel_decel_num: True, if output number of accelerations and decelerations (Mild+: bpm > 15, t > 15s)
-    :return:
+    :param acel_decel_num: True, if output number of accelerations and decelerations (mild+: bpm > 15, t > 15s)
+    :return: level, a_mild, d_mild, d_prologned
     """
-    baseline, vhr_std, accelerations, decelerations = find_signal_morphology(rr_intervals)
-    acceleration_num = 0
-    deceleration_num = 0
+    baseline, vhr_amp, accelerations, decelerations = find_signal_morphology(rr_intervals)
+    acceleration_mild = []
+    deceleration_mild = []
+    deceleration_prolonged = []
+    deceleration_severe = []
     for (start, stop) in accelerations:
-        if (stop - start) * fs > 15:
-            acceleration_num += 1
+        if (stop - start) * 1 / fs > 15:
+            acceleration_mild.append((stop / fs - start / fs))
     for (start, stop) in decelerations:
-        if (stop - start) * fs > 10:
-            deceleration_num += 1
+        if 120 > (stop - start) * 1 / fs >= 15:
+            deceleration_mild.append((start / fs, stop / fs))
+        elif 300 > (stop - start) * 1 / fs >= 120:
+            deceleration_prolonged.append((start / fs, stop / fs))
+        elif (stop - start) * 1 / fs >= 300:
+            deceleration_severe.append((start / fs, stop / fs))
+
 
     # Decision making
     level = 0
-    if (deceleration_num > 0) or (100 < baseline < 120) or (baseline > 160):
+    if (len(deceleration_prolonged) > 0) or (100 < baseline < 120) or (baseline > 160):
         level = 1
-    if (baseline > 180) or (baseline < 100) or (vhr_std <= 5) or (vhr_std >= 25):
+    if (baseline > 180) or (baseline < 100) or (vhr_amp <= 5) or (vhr_amp >= 25) or (len(deceleration_severe) > 0):
         level = 2
 
+    if (level == 1) and (len(acceleration_mild) > 0):
+        level = 0
+        print('Acceleration > 15s detected: level 1 decreased to 0')
     if acel_decel_num:
-        return level, acceleration_num, deceleration_num
+        if prolonged:
+            if severe:
+                return level,\
+                       len(acceleration_mild),\
+                       len(deceleration_mild),\
+                       len(deceleration_prolonged),\
+                       len(deceleration_severe)
+            return level, len(acceleration_mild), len(deceleration_mild), len(deceleration_prolonged)
+        return level, len(acceleration_mild), len(deceleration_mild)
     return level
 
 

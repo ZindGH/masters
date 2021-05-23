@@ -39,7 +39,9 @@ def edf2npy_save(folder_name: str = FOLDERS['abd'],
 
 
 def fhr2npy_save(folder_name: str = FOLDERS['FHR']):
-    """
+    """   Fetal heart rate signal dataset for training morphological analysis
+     methods and evaluating them against an expert consensus
+     !!Sample frequency is 4 Hz for both FHR and UA!!
 
     :return:
     """
