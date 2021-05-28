@@ -39,7 +39,7 @@ def filter_templates(fs: int, qrs_template: int = 1):
 
 
 def find_qrs(ecg, fs: int = processing.FS, peak_search: str = 'custom'):
-    """ GROUP DELAY FIX REQUIRED
+    """
     :find_peak: peak search algorithm - "original", "custom" available.
     """
     ecg = processing.bandpass_filter(ecg, high=15, low=5, order=1)
