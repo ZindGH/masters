@@ -62,7 +62,7 @@ def find_qrs(ecg, fs: int = processing.FS, peak_search: str = 'custom'):
 
 
 def panPeakDetect(detection, fs):
-    """ Algorithm is not working {or working, idc. anyway rework to numpy}"""
+    """ Pan and Tompkins search (modificated) """
 
     min_distance = int(0.25 * fs)
 
@@ -182,13 +182,13 @@ def ts_method(signal, peaks, template_duration: float = 0.12, fs: int = processi
 
     Parameters
     ----------
-    :param window: Number of templates for meaning and subtraction (window is not moving)
+    :param peaks: peaks for template creation
+    :param window: Number of templates for meaning and subtraction (window is not stationary)
     :param signal :  numpy array with dimensions (n,m) where m is number of points; n - samples
               set of signals, where first is for mQRS detection
     :param template_duration : number of s in template (between qrs)
                         if points not odd ==> + 1
     :param fs : sampling frequency
-    :param r_peaks: R peak values
     """
 
     t_dur = round(template_duration * fs)
@@ -203,7 +203,6 @@ def ts_method(signal, peaks, template_duration: float = 0.12, fs: int = processi
     extracted_signal = np.copy(signal)
     # print(len(r_peaks))
     # Please, rework it...
-    i = 0
     for n in range(dims[0]):
         for i in range(0, len(peaks), window):
 
@@ -220,7 +219,7 @@ def ts_method(signal, peaks, template_duration: float = 0.12, fs: int = processi
                     template[num, 0:dims[1] - r_ind + t_dur // 2] = extracted_signal[n, r_ind - t_dur // 2:]
                 else:
                     template[num] = extracted_signal[n, r_ind - t_dur // 2:r_ind + t_dur // 2]
-            template_mean = np.nanmean(template, axis=0)
+            template_mean = np.nanmean(template, axis=0) # None for edge cases
             for r_ind in r_peaks:
                 if r_ind < t_dur // 2:
                     extracted_signal[n, 0:r_ind + t_dur // 2 + 1] -= template_mean[t_dur // 2 - r_ind - 1:]
@@ -274,7 +273,7 @@ def median_filtration(signal, kernel: tuple = (4,)):
 def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS, time: bool = False):
     """
     Calculate RR intervals from peaks
-
+        !!! Should be reworked for constant sample frequency e.g. 4 Hz !!!
     :param time: True value will also return time approximate time array with T_max = sum(RR) at position 2
     :param peaks: peak indexes
     :param mode: output mode: "ms" (in milli seconds), "bpm" (beats per minute)
@@ -297,8 +296,7 @@ def calculate_rr(peaks, mode: str = "sec", fs: int = processing.FS, time: bool =
 
 
 def calculate_time_features(rr_intervals, limits: tuple = None, epochs: int = 1):
-    """
-
+    """ Calculates some time features
     :param epochs: number of 1m epochs, if epoch > 1, return list of dicts
     :param limits: low/high limits in values of rr_intervals(bpm/ms)
     :param rr_intervals:
@@ -328,8 +326,9 @@ def calculate_time_features(rr_intervals, limits: tuple = None, epochs: int = 1)
 
 
 def find_signal_morphology(rr_intervals, fs: float = 4):
-    """
-
+    """ Find some morphological features
+    !!! Acceleration/Deceleration search should be replaced for smth more appropriate
+        AmpStd must be investigated properly (It should be adapted for different acc/dec removement !!!
     :param rr_intervals: array of RR intervals
     :param fs: sample frequency (is not used)
     :return: Baseline, variation amplitude, accelerations, decelerations
@@ -430,8 +429,8 @@ def fhr_decision(rr_intervals, fs, acel_decel_num: bool = True, prolonged: bool 
 
 
 def evaluation_metrics(pred_peaks, true_peaks, fecg_fs: int = 1000, accept_window: int = 10):
-    """
-
+    """ Calculates some metrics for evaluation
+        !!! TN is not used !!!
     :param pred_peaks: Array of predicted peaks
     :param true_peaks: Array of actual peaks
     :param fecg_fs: Sample frequency of fetal ECG
@@ -452,7 +451,7 @@ def evaluation_metrics(pred_peaks, true_peaks, fecg_fs: int = 1000, accept_windo
     ppv = tp / (tp + fp)
     f1 = 2 * (tpr * ppv) / (tpr + ppv)
     acc = tp / (tp + fn + fp)
-    print(tp, fp, fn)
+    # print(tp, fp, fn)
     return tpr, ppv, acc, f1
 
 
